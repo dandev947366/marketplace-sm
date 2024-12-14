@@ -35,6 +35,19 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
         bool deleted,
         uint timestamp
     );
+    event RealEstateUpdated(
+        uint indexed id,
+        string name,
+        string description,
+        string location,
+        string images,
+        uint rooms,
+        uint price,
+        address owner,
+        bool booked,
+        bool deleted,
+        uint timestamp
+    );
 
     struct RealEstateOwner{
         address ownerAddress;
@@ -122,7 +135,7 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
         require(bytes(_location).length > 0, "Location cannot be empty");
         require(bytes(_images).length > 0, "Images cannot be empty");
         require(_rooms > 0, "Rooms cannot be empty");
-        require(_price > 0, "Price cannot be empty");
+        require(_price > 0, "Price cannot be 0");
 
         _totalRealEstate.increment();
         uint currentCount = _totalRealEstate.current();
@@ -141,9 +154,60 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
         realEstate.timestamp = block.timestamp;
         realEstateExist[realEstate.id] = true;
         idToRealEstate[currentCount] = realEstate;  // Store the real estate in the mapping
+        emit RealEstateCreated(
+            realEstate.id,
+            realEstate.name,
+            realEstate.description,
+            realEstate.location,
+            realEstate.images,
+            realEstate.rooms,
+            realEstate.price,
+            realEstate.owner,
+            realEstate.booked,
+            realEstate.deleted,
+            realEstate.timestamp
+        );
     }
 
-    function updateRealEstate(){}
+    function updateRealEstate(
+        uint _id,
+        string memory _name,
+        string memory _description,
+        string memory _location,
+        string memory _images,
+        uint _rooms,
+        uint _price
+    ){
+        require(realEstateExist[_id] == true, "Real estate not found");
+        require(idToRealEstate[_id].owner == msg.sender, "Unauthorized");
+        require(bytes(_name).length > 0, "Name cannot be empty");
+        require(bytes(_description).length > 0, "Description cannot be empty");
+        require(bytes(_location).length > 0, "Location cannot be empty");
+        require(bytes(_images).length > 0, "Images cannot be empty");
+        require(_rooms > 0, "Rooms cannot be empty");
+        require(_price > 0, "Price cannot be 0");
+        RealEstate memory realEstate = idToRealEstate[_id];
+        realEstate.name = _name;
+        realEstate.description = _description;
+        realEstate.location = _location;
+        realEstate.images = _images;
+        realEstate.rooms = _rooms;
+        realEstate.price = _price;
+        idToRealEstate[_id] = realEstate;
+        emit RealEstateUpdated(
+            realEstate.id,
+            realEstate.name,
+            realEstate.description,
+            realEstate.location,
+            realEstate.images,
+            realEstate.rooms,
+            realEstate.price,
+            realEstate.owner,
+            realEstate.booked,
+            realEstate.deleted,
+            realEstate.timestamp
+        );
+    }
     function deleteRealEstate(){}
     function getRealEstate(){}
     function getAllRealEstates(){}

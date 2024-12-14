@@ -134,7 +134,7 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
     constructor(uint _taxPercent, uint _securityFee){
         taxPercent = _taxPercent;
         securityFee = _securityFee;
-    };
+    }
 
     // CRUD FOR REAL ESTATE
     function createRealEstate(
@@ -328,8 +328,28 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
         return bookingsOf[_aid];
     }
 
-    // CRUD FOR REVIEW
-    function createReview(){}
+    function createReview(uint _aid, string memory _text) public{
+        require(realEstateExist[_aid], "Real Estate not found.");
+        require(hasBooked[msg.sender][aid], "Need to book first.");
+        require(bytes(reviewText).length) > 0, "Review text cannot be empty.");
+        require(bytes(_text).length <= 500, "Review text is too long.");
+
+        Review memory review;
+        review.aid = _aid;
+        review.id = reviewsOf[_aid].length;
+        review.reviewText = _text;
+        review.timestamp = block.timestamp();
+        review.owner = msg.sender;
+        reviewsOf[aid].push(review);
+
+        emit ReviewCreated(
+            review.id,
+            _id,
+            _text,
+            block.timestamp(),
+            msg.sender
+        );
+    }
     function updateReview(){}
     function deleteReview(){}
     function getReview(){}

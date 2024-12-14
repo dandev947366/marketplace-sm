@@ -22,6 +22,19 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
         bool deleted;
         uint timestamp;
     }
+    event RealEstateCreated(
+        uint indexed id,
+        string name,
+        string description,
+        string location,
+        string images,
+        uint rooms,
+        uint price,
+        address owner,
+        bool booked,
+        bool deleted,
+        uint timestamp
+    );
 
     struct Booking{
         uint id;
@@ -33,6 +46,16 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
         bool cancelled;
     }
 
+    event BookingCreated(
+        uint indexed id,
+        uint indexed aid,
+        address tenant,
+        uint date,
+        uint price,
+        bool checked,
+        bool cancelled
+    );
+
     struct Review{
         uint id;
         uint aid;
@@ -40,6 +63,14 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
         uint timestamp;
         address owner;
     }
+
+    event ReviewCreated(
+        uint indexed id,
+        uint indexed aid,
+        string reviewText,
+        uint timestamp,
+        address owner
+    );
 
     uint public securityFee;
     uint public taxPercent;
@@ -52,6 +83,10 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
     mapping(uint => mapping(uint => bool)) isDateBooked;
     mapping(address => mapping(uint => bool)) hasBooked;
 
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner can change listing price");
+        _;
+    }
     constructor(uint _taxPercent, uint _securityFee){
         taxPercent = _taxPercent;
         securityFee = _securityFee;

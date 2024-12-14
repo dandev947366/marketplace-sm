@@ -113,7 +113,19 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
         uint timestamp,
         address owner
     );
+    event ReviewUpdated(
+        uint indexed reviewId,
+        uint indexed realEstateId,
+        string updatedText,
+        uint timestamp
+    );
 
+    event ReviewDeleted(
+        uint indexed realEstateId,
+        uint indexed reviewId,
+        address indexed owner,
+        uint timestamp
+    );
     uint public securityFee;
     uint public taxPercent;
 
@@ -350,10 +362,56 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
             msg.sender
         );
     }
-    function updateReview(){}
-    function deleteReview(){}
-    function getReview(){}
-    function getAllReviews(){}
+    function updateReview(uint _aid, uint _reviewId, string memory _text) public {
+        require(realEstateExist[_aid], "Real Estate not found.");
+        require(hasBooked[msg.sender][_aid], "Need to book first.");
+        require(bytes(_text).length > 0, "Review text cannot be empty.");
+        require(bytes(_text).length <= 500, "Review text is too long.");
+        require(_reviewId < reviewsOf[_aid].length, "Review not found.");
+
+        // Fetch the review
+        Review storage review = reviewsOf[_aid][_reviewId];
+
+        // Ensure the caller is the owner of the review
+        require(review.owner == msg.sender, "Unauthorized");
+
+        // Update the review text and timestamp
+        review.reviewText = _text;
+        review.timestamp = block.timestamp;
+
+        // Emit the event
+        emit ReviewUpdated(
+            _reviewId,
+            _aid,
+            _text,
+            review.timestamp
+        );
+    }
+
+    function deleteReview(uint _aid, uint _reviewId) public {
+        require(realEstateExist[_aid], "Real Estate not found.");
+        require(_reviewId < reviewsOf[_aid].length, "Review not found.");
+        // Fetch the review
+        Review storage review = reviewsOf[_aid][_reviewId];
+        // Ensure the caller is the owner of the review
+        require(review.owner == msg.sender, "Unauthorized");
+        // Mark the review as deleted (or you can remove it from the array)
+        review.deleted = true;
+        // Emit the event
+        emit ReviewDeleted(_aid, _reviewId, review.owner, block.timestamp);
+    }
+
+    function getReview(uint _aid, uint _reviewId) public view returns (Review memory) {
+        require(realEstateExist[_aid], "Real Estate not found.");
+        require(_reviewId < reviewsOf[_aid].length, "Review not found.");
+        return reviewsOf[_aid][_reviewId];
+    }
+
+    function getAllReviews(uint _aid) public view returns (Review[] memory) {
+        require(realEstateExist[_aid], "Real Estate not found.");
+        return reviewsOf[_aid];
+    }
+
 
 
 

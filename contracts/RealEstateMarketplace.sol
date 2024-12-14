@@ -178,7 +178,7 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
         realEstate.owner = msg.sender;
         realEstate.booked = false;
         realEstate.deleted = false;
-        realEstate.timestamp = block.timestamp;
+        realEstate.timestamp = currentTime();
         realEstateExist[realEstate.id] = true;
         idToRealEstate[currentCount] = realEstate;  // Store the real estate in the mapping
         emit RealEstateCreated(
@@ -192,7 +192,7 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
             realEstate.owner,
             realEstate.booked,
             realEstate.deleted,
-            realEstate.timestamp
+            currentTime()
         );
     }
 
@@ -232,7 +232,7 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
             realEstate.owner,
             realEstate.booked,
             realEstate.deleted,
-            realEstate.timestamp
+            currentTime()
         );
     }
     function deleteRealEstate(uint _id){
@@ -244,7 +244,7 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
             _id,
             idToRealEstate[_id].owner,
             idToRealEstate[_id].deleted,
-            block.timestamp
+            currentTime()
         );
     }
     function getRealEstate(uint _id) public view returns(RealEstate memory) {
@@ -260,7 +260,7 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
         for(uint i=1; i<=_totalRealEstate.current();i++){
             if(!idToRealEstate[_id].deleted){
                 realEstate[index++] = idToRealEstate[_id];
-            };
+            }
         }
     }
     // RESERVE REAL ESTATE
@@ -286,7 +286,7 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
             dates,
             totalCost,
             finalCost,
-            block.timestamp
+            currentTime()
         );
     }
 
@@ -332,7 +332,7 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
             _bookingId,
             true,
             cancelledDates,
-            block.timestamp
+            currentTime()
         );
     }
 
@@ -350,7 +350,7 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
         review.aid = _aid;
         review.id = reviewsOf[_aid].length;
         review.reviewText = _text;
-        review.timestamp = block.timestamp();
+        review.timestamp = currentTime();
         review.owner = msg.sender;
         reviewsOf[aid].push(review);
 
@@ -358,7 +358,7 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
             review.id,
             _id,
             _text,
-            block.timestamp(),
+            currentTime(),
             msg.sender
         );
     }
@@ -377,7 +377,7 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
 
         // Update the review text and timestamp
         review.reviewText = _text;
-        review.timestamp = block.timestamp;
+        review.timestamp = currentTime();
 
         // Emit the event
         emit ReviewUpdated(
@@ -411,7 +411,49 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
         require(realEstateExist[_aid], "Real Estate not found.");
         return reviewsOf[_aid];
     }
-
+    function claimFunds(uint _aid, uint _bookingId) public {
+        require(msg.sender == idToRealEstate[_aid].owner, "Unauthorized entity.");
+        require(!bookingsOf[_aid][_bookingId].checked, "Real estate already checked on this date.");
+        uint price = bookingsOf[_aid][_bookingId].price;
+        uint fee = (price*taxPercent)/100;
+        payTo(idToRealEstate[_aid].owner, (price-fee));
+        payTo(owner(),fee);
+        payTo(msg.sender, securityFee);
+    }
+    function refundBooking(uint _aid, uint _bookingId) public nonReentrant {
+        Booking memory booking = bookingsOf[_aid][_bookingId];
+        require(!booking.checked, "Real estate already checked on this date.");
+        require(isDateBooked[_aid][booking.date], "Did not book on this date.");
+        if (msg.sender != owner()){
+            require(msg.sender == booking.tenant, "Unauthorized tenant.");
+            require(booking.date > currentTime(), "Can no longer refund, booking date started.");
+        }
+        bookingsOf[_aid][_bookingId].cancelled = true;
+        isDateBooked[_aid][booking.date] = false;
+        uint lastIndex = bookedDates[_aid].length - 1;
+        uint lastBookingId = bookedDates[_aid][lastIndex];
+        bookedDates[_aid][_bookingId] = lastBookingId;
+        bookedDates[_aid].pop();
+        uint fee = (booking.price * securityFee) / 100;
+        uint collateral = fee / 2;
+        payTo(idToRealEstatep[_aid].owner, collateral);
+        payTo(owner(), collateral);
+        payTo(msg.sender, booing.price);
+    }
+    function tenantBooked(uint _id) public view returns (bool) {
+        return hasBooked[msg.sender][_id];
+    }
+    function getUnavailableDates(uint _aid) public view returns (uint[] memory)
+    {
+        return bookedDates[_aid];
+    }
+    function payTo(address _to, uint256 _amount) internal {
+        (bool success, ) = payable(_to).call{ value: _amount }('');
+        require(success);
+      }
+    function currentTime() internal view returns (uint256) {
+        return (block.timestamp * 1000) + 1000;
+      }
 
 
 

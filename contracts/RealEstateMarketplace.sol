@@ -48,6 +48,13 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
         bool deleted,
         uint timestamp
     );
+    event RealEstateDeleted(
+        uint indexed id,
+        address indexed owner,
+        bool deleted,
+        uint timestamp
+    );
+
 
     struct RealEstateOwner{
         address ownerAddress;
@@ -73,15 +80,23 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
         bool cancelled;
     }
 
-    event BookingCreated(
-        uint indexed id,
+    event RealEstateReserved(
         uint indexed aid,
-        address tenant,
-        uint date,
-        uint price,
-        bool checked,
-        bool cancelled
+        address indexed tenant,
+        uint[] dates,
+        uint totalCost,
+        uint finalCost,
+        uint timestamp
     );
+
+    event ReservationCancelled(
+        uint indexed aid,
+        uint indexed bookingId,
+        bool cancelled,
+        uint[] date,
+        uint timestamp
+    );
+
 
     struct Review{
         uint id;
@@ -208,16 +223,110 @@ contract RealEstateMarketplace is Ownable, ReentrancyGuard {
             realEstate.timestamp
         );
     }
-    function deleteRealEstate(){}
-    function getRealEstate(){}
-    function getAllRealEstates(){}
+    function deleteRealEstate(uint _id){
+        require(realEstateExist[_id] == true, "Real estate not found");
+        require(idToRealEstate[_id].owner == msg.sender, "Unauthorized");
+        realEstateExist[realEstate.id] = false;
+        idToRealEstate[_id].deleted = true;
+        emit RealEstateDeleted(
+            _id,
+            idToRealEstate[_id].owner,
+            idToRealEstate[_id].deleted,
+            block.timestamp
+        );
+    }
+    function getRealEstate(uint _id) public view returns(RealEstate memory) {
+        return idToRealEstate[_id];
+    }
+    function getAllRealEstates(address _owner) public view returns(RealEstate[] memory){
+        uint available;
+        for(uint i=1; i<=_totalRealEstate.current();i++){
+            if(!idToRealEstate[_id].deleted) available++;
+        }
+        RealEstate memory realEstate = RealEstate[](available);
+        uint index;
+        for(uint i=1; i<=_totalRealEstate.current();i++){
+            if(!idToRealEstate[_id].deleted){
+                realEstate[index++] = idToRealEstate[_id];
+            };
+        }
+    }
+    // RESERVE REAL ESTATE
+    function reserveRealEstate(uint _aid, uint[] memory dates) public payable{
+        uint totalCost = idToRealEstate[_aid].price * dates.length;
+        uint finalCost = (totalCost * securityFee) /100;
+        require(realEstateExist[_aid], "Real Estate not found.");
+        require(msg.value >= finalCost, "Insufficient fund.");
+        require(datesAreCleared(_aid, _dates), "Booked date found among dates!.");
+        for (uint i=0; i<dates.length; i++){
+            Booking memory booking;
+            booking.aid = _aid;
+            booking.id  = bookingsOf[_aid].length;
+            booking.tenant = msg.sender;
+            booking.date = dates[i];
+            booking.price = idToRealEstate[_aid].price;
+            bookingsOf[_aid][dates[i]] = true;
+            bookedDates[_aid].push(dates[i]);
+        }
+        emit RealEstateReserved(
+            _aid,
+            msg.sender,
+            dates,
+            totalCost,
+            finalCost,
+            block.timestamp
+        );
+    }
 
-    // CRUD FOR BOOKING
-    function createBooking(){}
-    function updateBooking(){}
-    function deleteBooking(){}
-    function getBooking(){}
-    function getAllBookings(){}
+    function datesAreCleared(uint aid, uint[] memory dates) internal view returns (bool){
+        bool lastCheck = true;
+        for (uint i = 0; i<dates.length; i++){
+            for (uint j =0; j<bookedDates[aid].length;j++){
+                if(fates[i] == bookedDates[aid][j]) lastCheck = false;
+            }
+        }
+        return lastCheck;
+    }
+    function cancelReservation(uint _aid, uint _bookingId) public {
+        require(realEstateExist[_aid], "Real Estate not found.");
+        require(_bookingId < bookingsOf[_aid].length, "Booking not found.");
+
+        // Fetch the booking
+        Booking storage booking = bookingsOf[_aid][_bookingId];
+
+        // Authorization and state checks
+        require(booking.tenant == msg.sender, "Unauthorized");
+        require(!booking.cancelled, "Booking already cancelled.");
+
+        // Mark the booking as cancelled
+        booking.cancelled = true;
+
+        // Clear the booked dates
+        uint[] memory cancelledDates = new uint[](bookedDates[_aid].length);
+        uint counter = 0;
+
+        for (uint i = 0; i < bookedDates[_aid].length; i++) {
+            uint date = bookedDates[_aid][i];
+            if (isDateBooked[_aid][date]) {
+                isDateBooked[_aid][date] = false;
+                cancelledDates[counter] = date;
+                counter++;
+            }
+        }
+
+        // Emit the event with the updated information
+        emit ReservationCancelled(
+            _aid,
+            _bookingId,
+            true,
+            cancelledDates,
+            block.timestamp
+        );
+    }
+
+    function getBooking(uint _aid) public view returns (Booking[] memory){
+        return bookingsOf[_aid];
+    }
 
     // CRUD FOR REVIEW
     function createReview(){}

@@ -124,7 +124,7 @@ contract NFTMarketplace is ERC721URIStorage {
         uint256 unSoldItemCount = _tokenIds.current() - _itemsSold.current();
         uint256 currentIndex = 0;
         MarketItem[] memory items = new MarketItem[](unSoldItemCount);
-        for (uint256 i = 1; i < itemCount; i++) {
+        for (uint256 i = 1; i <= itemCount; i++) {
             if (idMarketItem[i].owner == address(this)) {
                 uint256 currentId = i;
                 MarketItem storage currentItem = idMarketItem[currentId];
@@ -140,14 +140,36 @@ contract NFTMarketplace is ERC721URIStorage {
         uint256 totalCount = _tokenIds.current();
         uint256 itemCount = 0;
         uint256 currentIndex = 0;
-        for (uint256 i = 1; i < totalCount; i++) {
+        for (uint256 i = 1; i <= totalCount; i++) {
             if (idMarketItem[i].owner == msg.sender) {
                 itemCount += 1;
             }
         }
         MarketItem[] memory items = new MarketItem[](itemCount);
-        for (uint256 i = 1; i < totalCount; i++) {
+        for (uint256 i = 1; i <= totalCount; i++) {
             if (idMarketItem[i].owner == msg.sender) {
+                uint256 currentId = i;
+                MarketItem storage currentItem = idMarketItem[currentId];
+                items[currentIndex] = currentItem;
+                currentIndex += 1;
+            }
+        }
+        return items;
+    }
+
+    // GET USER'S ITEMS
+    function fetchItemsListed() public view returns (MarketItem[] memory){
+        uint256 totalCount = _tokenIds.current();
+        uint256 itemCount = 0;
+        uint256 currentIndex = 0;
+        for(uint256 i=1; i<=totalCount; i++){
+            if(idMarketItem[i].seller == msg.sender){
+                itemCount += 1;
+            }
+        }
+        MarketItem[] memory items = new MarketItem[](itemCount);
+        for(uint256 i=1; i<=totalCount; i++){
+            if(idMarketItem[i].seller == msg.sender){
                 uint256 currentId = i;
                 MarketItem storage currentItem = idMarketItem[currentId];
                 items[currentIndex] = currentItem;
